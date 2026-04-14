@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Uintivierailuseuranta 2026</title>
+  <style>
+    :root {
+      --ocean-dark:    #0077b6;
+      --ocean-mid:     #00b4d8;
+      --ocean-light:   #90e0ef;
+      --ocean-pale:    #caf0f8;
+      --bg:            #f0f7ff;
+      --card-bg:       #ffffff;
+      --today-color:   #f77f00;
+      --visited-bg:    #00b4d8;
+      --visited-text:  #ffffff;
+      --outside-bg:    #f0f0f0;
+      --outside-text:  #bdbdbd;
+      --past-miss-bg:  #ffe8e8;
+      --past-miss-text:#b04040;
+      --text:          #1a2a3a;
+      --text-muted:    #6b7c8d;
+      --shadow:        0 2px 8px rgba(0,119,182,0.10);
+      --radius:        12px;
+      --radius-sm:     7px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    header {
+      text-align: center;
+      padding: 24px 0 20px;
+    }
+    header h1 {
+      font-size: clamp(1.4rem, 5vw, 2.1rem);
+      color: var(--ocean-dark);
+      letter-spacing: -0.5px;
+    }
+    header .subtitle {
+      margin-top: 4px;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* Stats */
+    .stats {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin: 0 auto 12px;
+      max-width: 700px;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 16px 24px;
+      text-align: center;
+      min-width: 130px;
+      flex: 1;
+    }
+    .stat-card.warning { background: #fff3e0; }
+    .stat-card.success { background: #e8f9f1; }
+    .stat-value {
+      font-size: clamp(1.7rem, 5vw, 2.4rem);
+      font-weight: 700;
+      color: var(--ocean-dark);
+      line-height: 1.1;
+    }
+    .stat-card.warning .stat-value { color: #e65100; }
+    .stat-card.success .stat-value { color: #00796b; }
+    .stat-label {
+      font-size: 0.80rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Progress bar */
+    .progress-wrap {
+      max-width: 700px;
+      margin: 0 auto 24px;
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px 20px;
+    }
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+    .progress-label span:first-child { font-weight: 600; color: var(--text); }
+    .progress-track {
+      height: 12px;
+      background: var(--ocean-pale);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--ocean-dark), var(--ocean-mid));
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+    .progress-fill.complete {
+      background: linear-gradient(90deg, #00796b, #26a69a);
+    }
+
+    /* Alert banner */
+    .alert {
+      max-width: 700px;
+      margin: 0 auto 16px;
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-align: center;
+      display: none;
+    }
+    .alert.show { display: block; }
+    .alert.success { background: #e8f9f1; color: #00695c; border: 1px solid #80cbc4; }
+    .alert.danger  { background: #fdecea; color: #b71c1c; border: 1px solid #ef9a9a; }
+
+    /* Calendar */
+    #calendar {
+      max-width: 700px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      padding-bottom: 40px;
+    }
+
+    .month-block {
+      background: var(--card-bg);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .month-title {
+      background: var(--ocean-dark);
+      color: #fff;
+      text-align: center;
+      padding: 10px 0;
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .day-headers {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background: var(--ocean-pale);
+    }
+    .day-header {
+      text-align: center;
+      padding: 6px 0;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--ocean-dark);
+      text-transform: uppercase;
+    }
+    .days-grid {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 3px;
+      padding: 6px;
+    }
+    .day-cell {
+      aspect-ratio: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-sm);
+      font-size: clamp(0.72rem, 2.5vw, 0.90rem);
+      font-weight: 500;
+      cursor: default;
+      user-select: none;
+      transition: background 0.15s, transform 0.1s;
+      border: 2px solid transparent;
+      position: relative;
+    }
+    .day-cell.empty { /* placeholder */ }
+    .day-cell.outside-period {
+      color: var(--outside-text);
+      background: var(--outside-bg);
+      font-weight: 400;
+    }
+    .day-cell.in-period {
+      cursor: pointer;
+    }
+    .day-cell.in-period:hover {
+      background: var(--ocean-pale);
+      transform: scale(1.08);
+      z-index: 1;
+    }
+    .day-cell.in-period:active {
+      transform: scale(0.95);
+    }
+    .day-cell.visited {
+      background: var(--visited-bg);
+      color: var(--visited-text);
+      font-weight: 700;
+    }
+    .day-cell.visited:hover {
+      background: var(--ocean-dark);
+    }
+    .day-cell.today {
+      border-color: var(--today-color);
+      box-shadow: 0 0 0 2px var(--today-color);
+    }
+    .day-cell.today:not(.visited) {
+      background: #fff5e6;
+      color: var(--today-color);
+      font-weight: 700;
+    }
+    .day-cell.past-unvisited.in-period:not(.visited) {
+      background: var(--past-miss-bg);
+      color: var(--past-miss-text);
+    }
+    .day-cell.past-unvisited.in-period:not(.visited):hover {
+      background: #ffd0d0;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Uintivierailuseuranta 2026</h1>
+  <p class="subtitle">13.4.2026 – 18.10.2026 &middot; Tavoite: 150 uintia</p>
+</header>
+
+<section class="stats" id="stats">
+  <div class="stat-card" id="card-visits">
+    <div class="stat-value" id="stat-visits">0</div>
+    <div class="stat-label">Vierailuja tehty</div>
+  </div>
+  <div class="stat-card" id="card-needed">
+    <div class="stat-value" id="stat-needed">150</div>
+    <div class="stat-label">Vierailuja jäljellä</div>
+  </div>
+  <div class="stat-card" id="card-skip">
+    <div class="stat-value" id="stat-skip">–</div>
+    <div class="stat-label">Päiviä voi skipata</div>
+  </div>
+</section>
+
+<div class="progress-wrap">
+  <div class="progress-label">
+    <span id="progress-text">0 / 150 uintia</span>
+    <span id="progress-pct">0 %</span>
+  </div>
+  <div class="progress-track">
+    <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+  </div>
+</div>
+
+<div class="alert" id="alert-banner"></div>
+
+<main id="calendar"></main>
+
+<script>
+  const STORAGE_KEY   = 'uinti-vierailut-2026';
+  const GOAL          = 150;
+  const PERIOD_START  = new Date(2026, 3, 13);  // April 13 (months 0-based)
+  const PERIOD_END    = new Date(2026, 9, 18);  // October 18
+
+  const MONTH_NAMES = [
+    'Tammikuu','Helmikuu','Maaliskuu','Huhtikuu','Toukokuu','Kesäkuu',
+    'Heinäkuu','Elokuu','Syyskuu','Lokakuu','Marraskuu','Joulukuu'
+  ];
+  const DAY_HEADERS = ['Ma','Ti','Ke','To','Pe','La','Su'];
+
+  // --- Data layer ---
+
+  function loadVisits() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      return new Set(Array.isArray(arr) ? arr.filter(isValidDate) : []);
+    } catch {
+      return new Set();
+    }
+  }
+
+  function saveVisits(visits) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify([...visits].sort()));
+  }
+
+  function isValidDate(s) {
+    return typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
+  }
+
+  // --- Date utils ---
+
+  function toDateString(date) {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+
+  function stripTime(date) {
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  }
+
+  function getToday() {
+    return stripTime(new Date());
+  }
+
+  function daysBetween(a, b) {
+    // Returns (b - a) in whole days; positive if b is after a
+    return Math.round((b - a) / (1000 * 60 * 60 * 24));
+  }
+
+  function isInPeriod(date) {
+    return date >= PERIOD_START && date <= PERIOD_END;
+  }
+
+  // --- Stats ---
+
+  function calculateStats(visits) {
+    const today = getToday();
+    const visitsSoFar = visits.size;
+    const remainingNeeded = Math.max(0, GOAL - visitsSoFar);
+
+    let remainingDays;
+    if (today > PERIOD_END) {
+      remainingDays = 0;
+    } else if (today < PERIOD_START) {
+      remainingDays = daysBetween(PERIOD_START, PERIOD_END) + 1; // 189
+    } else {
+      remainingDays = daysBetween(today, PERIOD_END) + 1; // inclusive of today
+    }
+
+    const maxSkippable = Math.max(0, remainingDays - remainingNeeded);
+    const goalMet = visitsSoFar >= GOAL;
+    const goalImpossible = !goalMet && remainingNeeded > remainingDays;
+
+    return { visitsSoFar, remainingNeeded, remainingDays, maxSkippable, goalMet, goalImpossible };
+  }
+
+  // --- Render stats ---
+
+  function renderStats(visits) {
+    const s = calculateStats(visits);
+
+    document.getElementById('stat-visits').textContent = s.visitsSoFar;
+    document.getElementById('stat-needed').textContent = s.remainingNeeded;
+    document.getElementById('stat-skip').textContent   = s.maxSkippable;
+
+    // Color the cards
+    const cardNeeded = document.getElementById('card-needed');
+    cardNeeded.className = 'stat-card' + (s.goalImpossible ? ' warning' : s.goalMet ? ' success' : '');
+
+    const cardSkip = document.getElementById('card-skip');
+    cardSkip.className = 'stat-card' + (s.goalImpossible ? ' warning' : s.maxSkippable === 0 && !s.goalMet ? ' warning' : '');
+
+    const cardVisits = document.getElementById('card-visits');
+    cardVisits.className = 'stat-card' + (s.goalMet ? ' success' : '');
+
+    // Progress bar
+    const pct = Math.min(100, Math.round((s.visitsSoFar / GOAL) * 100));
+    const fill = document.getElementById('progress-fill');
+    fill.style.width = pct + '%';
+    fill.className = 'progress-fill' + (s.goalMet ? ' complete' : '');
+    document.getElementById('progress-text').textContent = s.visitsSoFar + ' / ' + GOAL + ' uintia';
+    document.getElementById('progress-pct').textContent  = pct + '\u00a0%';
+
+    // Alert banner
+    const banner = document.getElementById('alert-banner');
+    if (s.goalMet) {
+      banner.textContent = 'Tavoite saavutettu! \uD83C\uDF0A Hieno suoritus!';
+      banner.className = 'alert show success';
+    } else if (s.goalImpossible) {
+      banner.textContent = 'Tavoite ei ole en\u00e4\u00e4 saavutettavissa \u2014 j\u00e4ljell\u00e4 ' + s.remainingDays + ' p\u00e4iv\u00e4\u00e4, tarvitaan ' + s.remainingNeeded + ' uintia.';
+      banner.className = 'alert show danger';
+    } else {
+      banner.className = 'alert';
+    }
+  }
+
+  // --- Toggle visit ---
+
+  let visits = loadVisits();
+
+  function toggleVisit(dateStr) {
+    if (visits.has(dateStr)) {
+      visits.delete(dateStr);
+    } else {
+      visits.add(dateStr);
+    }
+    saveVisits(visits);
+    // Update the clicked cell immediately, then re-render stats
+    updateCell(dateStr);
+    renderStats(visits);
+  }
+
+  function updateCell(dateStr) {
+    const cell = document.querySelector(`.day-cell[data-date="${dateStr}"]`);
+    if (!cell) return;
+    if (visits.has(dateStr)) {
+      cell.classList.add('visited');
+    } else {
+      cell.classList.remove('visited');
+    }
+  }
+
+  // --- Render calendar ---
+
+  function renderCalendar() {
+    const cal = document.getElementById('calendar');
+    cal.innerHTML = '';
+    const today = getToday();
+
+    // Months: April (3) through October (9), year 2026
+    for (let month = 3; month <= 9; month++) {
+      const year = 2026;
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = new Date(year, month, 1);
+      // Monday-first offset: JS getDay() 0=Sun..6=Sat → Mon=0..Sun=6
+      const offset = (firstDay.getDay() + 6) % 7;
+
+      const block = document.createElement('div');
+      block.className = 'month-block';
+
+      // Month title
+      const title = document.createElement('div');
+      title.className = 'month-title';
+      title.textContent = MONTH_NAMES[month] + ' ' + year;
+      block.appendChild(title);
+
+      // Day-of-week headers
+      const headers = document.createElement('div');
+      headers.className = 'day-headers';
+      DAY_HEADERS.forEach(h => {
+        const hd = document.createElement('div');
+        hd.className = 'day-header';
+        hd.textContent = h;
+        headers.appendChild(hd);
+      });
+      block.appendChild(headers);
+
+      // Days grid
+      const grid = document.createElement('div');
+      grid.className = 'days-grid';
+
+      // Leading empty cells
+      for (let i = 0; i < offset; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day-cell empty';
+        grid.appendChild(empty);
+      }
+
+      // Day cells
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(year, month, day);
+        const dateStr = toDateString(date);
+        const inPeriod = isInPeriod(date);
+        const isToday = date.getTime() === today.getTime();
+        const isPast = date < today;
+        const isVisited = visits.has(dateStr);
+
+        const cell = document.createElement('div');
+        cell.className = 'day-cell';
+        cell.dataset.date = dateStr;
+        cell.textContent = day;
+
+        if (inPeriod) {
+          cell.classList.add('in-period');
+          if (isVisited)                    cell.classList.add('visited');
+          if (isToday)                      cell.classList.add('today');
+          if (isPast && !isVisited)         cell.classList.add('past-unvisited');
+          cell.addEventListener('click', () => toggleVisit(dateStr));
+        } else {
+          cell.classList.add('outside-period');
+        }
+
+        grid.appendChild(cell);
+      }
+
+      // Trailing empty cells to complete the last row
+      const totalCells = offset + daysInMonth;
+      const remainder = totalCells % 7;
+      if (remainder !== 0) {
+        for (let i = 0; i < 7 - remainder; i++) {
+          const empty = document.createElement('div');
+          empty.className = 'day-cell empty';
+          grid.appendChild(empty);
+        }
+      }
+
+      block.appendChild(grid);
+      cal.appendChild(block);
+    }
+  }
+
+  // --- Init ---
+  renderCalendar();
+  renderStats(visits);
+</script>
+</body>
+</html>
