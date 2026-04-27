@@ -1,0 +1,3 @@
+# PRH API -asiakas käyttää vain Python-standardikirjastoa (urllib, json).
+# Ei ulkoisia riippuvuuksia.
+# Python >= 3.10 vaaditaan (match/type hints).
